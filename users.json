@@ -1,0 +1,23 @@
+{
+  "adeelcheena791@gmail.com": {
+    "name": "Muhammad Adeel",
+    "username": "cheena791",
+    "email": "adeelcheena791@gmail.com",
+    "password": "ed6f14aa22e17bf227423a2df3a5e1e69b4a8e1d6367e3c986630ce4ce1f160c",
+    "friends": [
+      "791cheena@gmail.com"
+    ],
+    "profile_id": "105d0cbc",
+    "friend_requests": []
+  },
+  "791cheena@gmail.com": {
+    "name": "Ali",
+    "username": "ali791",
+    "email": "791cheena@gmail.com",
+    "password": "ed6f14aa22e17bf227423a2df3a5e1e69b4a8e1d6367e3c986630ce4ce1f160c",
+    "friends": [
+      "adeelcheena791@gmail.com"
+    ],
+    "profile_id": "49ed15c1"
+  }
+}

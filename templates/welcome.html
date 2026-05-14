@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatPilot AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #080810; --surface: #10101e; --surface2: #16162a;
+    --accent: #7c6af7; --accent2: #f76a8c;
+    --text: #f0f0ff; --muted: #8888aa; --border: rgba(124,106,247,0.18);
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  .grid-bg { position: fixed; inset: 0; z-index: 0; background-image: linear-gradient(rgba(124,106,247,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(124,106,247,0.04) 1px, transparent 1px); background-size: 60px 60px; pointer-events: none; }
+  .glow { position: fixed; width: 600px; height: 600px; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
+  .glow-1 { background: rgba(124,106,247,0.12); top: -200px; left: -100px; }
+  .glow-2 { background: rgba(247,106,140,0.08); bottom: -200px; right: -100px; }
+  nav { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 24px 6vw; border-bottom: 1px solid var(--border); }
+  .logo { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 12px; }
+  .btn { padding: 10px 24px; border-radius: 50px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; border: none; text-decoration: none; transition: all 0.2s; display: inline-block; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #6a58e0; transform: translateY(-1px); }
+  .hero { position: relative; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 100px 6vw 80px; min-height: calc(100vh - 73px); }
+  .badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(124,106,247,0.1); border: 1px solid rgba(124,106,247,0.3); border-radius: 50px; padding: 6px 16px; font-size: 13px; color: var(--accent); margin-bottom: 36px; animation: fadeUp 0.6s ease both; }
+  .badge-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } }
+  h1 { font-family: 'Syne', sans-serif; font-size: clamp(42px, 7vw, 82px); font-weight: 800; line-height: 1.05; letter-spacing: -2px; margin-bottom: 24px; animation: fadeUp 0.6s 0.1s ease both; }
+  h1 em { font-style: normal; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .subtitle { font-size: clamp(16px, 2vw, 20px); color: var(--muted); max-width: 560px; line-height: 1.6; margin-bottom: 48px; animation: fadeUp 0.6s 0.2s ease both; }
+  .hero-btns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; animation: fadeUp 0.6s 0.3s ease both; }
+  .btn-large { padding: 14px 36px; font-size: 16px; }
+  .features { position: relative; z-index: 5; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; padding: 0 6vw 100px; max-width: 1100px; margin: 0 auto; }
+  .feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px 28px; transition: border-color 0.2s, transform 0.2s; }
+  .feature-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+  .feature-icon { width: 48px; height: 48px; background: rgba(124,106,247,0.12); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 20px; }
+  .feature-card h3 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+  .feature-card p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 600px) { nav { padding: 18px 5vw; } .hero { padding: 70px 5vw 60px; } .features { padding: 0 5vw 60px; } }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+<nav>
+  <div class="logo">Chat<span>Pilot</span> AI</div>
+  <div class="nav-links">
+    <a href="/login" class="btn btn-ghost">Log in</a>
+    <a href="/register" class="btn btn-primary">Get started</a>
+  </div>
+</nav>
+<section class="hero">
+  <div class="badge"><div class="badge-dot"></div>AI-powered chat assistant</div>
+  <h1>Chat smarter<br>with <em>AI by your side</em></h1>
+  <p class="subtitle">ChatPilot reads your live conversations and suggests the perfect reply — casual with friends, respectful with teachers, professional in business.</p>
+  <div class="hero-btns">
+    <a href="/register" class="btn btn-primary btn-large">Start for free</a>
+    <a href="/login" class="btn btn-ghost btn-large">I have an account</a>
+  </div>
+</section>
+<section class="features">
+  <div class="feature-card"><div class="feature-icon">💬</div><h3>Live chat</h3><p>Real-time messaging with friends. Add contacts by sharing your profile link.</p></div>
+  <div class="feature-card"><div class="feature-icon">🤖</div><h3>AI suggestions</h3><p>Toggle AI on and get 3 smart reply suggestions based on your conversation context.</p></div>
+  <div class="feature-card"><div class="feature-icon">🎭</div><h3>Tone aware</h3><p>AI detects if you're chatting with a friend, teacher, or business contact and adjusts tone.</p></div>
+  <div class="feature-card"><div class="feature-icon">🔒</div><h3>Private & secure</h3><p>Your conversations are yours. AI assists but never stores your personal chats.</p></div>
+</section>
+</body>
+</html>

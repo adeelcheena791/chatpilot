@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Friend — ChatPilot AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root { --bg: #080810; --surface: #10101e; --surface2: #16162a; --accent: #7c6af7; --text: #f0f0ff; --muted: #8888aa; --border: rgba(124,106,247,0.18); --success: #6af7b8; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .grid-bg { position: fixed; inset: 0; z-index: 0; background-image: linear-gradient(rgba(124,106,247,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(124,106,247,0.04) 1px, transparent 1px); background-size: 60px 60px; pointer-events: none; }
+  .glow { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
+  .glow-1 { width: 500px; height: 500px; background: rgba(124,106,247,0.1); top: -150px; left: -100px; }
+  .card { position: relative; z-index: 10; background: var(--surface); border: 1px solid var(--border); border-radius: 28px; padding: 48px 40px; width: 100%; max-width: 420px; text-align: center; animation: fadeUp 0.5s ease both; }
+  .logo { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 32px; display: block; text-decoration: none; color: var(--text); }
+  .logo span { color: var(--accent); }
+  .avatar-big { width: 80px; height: 80px; border-radius: 50%; background: rgba(124,106,247,0.2); color: var(--accent); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; margin: 0 auto 20px; border: 2px solid var(--accent); }
+  h2 { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+  .username { color: var(--muted); font-size: 15px; margin-bottom: 32px; }
+  .btn-add { width: 100%; background: var(--accent); color: white; border: none; border-radius: 14px; padding: 14px; font-size: 16px; font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; margin-bottom: 12px; }
+  .btn-add:hover { background: #6a58e0; transform: translateY(-1px); }
+  .btn-add:disabled { background: var(--surface2); color: var(--muted); cursor: not-allowed; transform: none; }
+  .msg { padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-bottom: 16px; display: none; }
+  .msg.success { background: rgba(106,247,184,0.1); border: 1px solid rgba(106,247,184,0.3); color: var(--success); display: block; }
+  .msg.error { background: rgba(247,106,140,0.1); border: 1px solid rgba(247,106,140,0.3); color: #f76a8c; display: block; }
+  .back { color: var(--muted); font-size: 13px; text-decoration: none; }
+  .back:hover { color: var(--accent); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="glow glow-1"></div>
+<div class="card">
+  <a href="/" class="logo">Chat<span>Pilot</span> AI</a>
+  <div class="avatar-big">{{ target.name[:2].upper() }}</div>
+  <h2>{{ target.name }}</h2>
+  <p class="username">@{{ target.username }}</p>
+  <div id="msg"></div>
+  <button class="btn-add" id="addBtn" onclick="sendRequest()">
+    + Add Friend
+  </button>
+  <br><br>
+  <a href="/chat" class="back">← Back to chat</a>
+</div>
+<script>
+function sendRequest() {
+  const btn = document.getElementById('addBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  fetch('/send_friend_request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ profile_id: '{{ target.profile_id }}' })
+  })
+  .then(r => r.json())
+  .then(data => {
+    const msg = document.getElementById('msg');
+    msg.textContent = data.message;
+    msg.className = 'msg ' + (data.success ? 'success' : 'error');
+    if (data.success) {
+      btn.textContent = '✅ Request Sent!';
+    } else {
+      btn.disabled = false;
+      btn.textContent = '+ Add Friend';
+    }
+  });
+}
+</script>
+</body>
+</html>
