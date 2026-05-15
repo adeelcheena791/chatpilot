@@ -137,24 +137,20 @@ STRICT RULES:
 Example format: ["reply one", "reply two", "reply three"]"""
 
     payload = json.dumps({
-        "model": "llama-3.3-70b-versatile",
-        "max_tokens": 200,
-        "messages": [{"role": "user", "content": prompt}]
+        "contents": [{"parts": [{"text": prompt}]}]
     }).encode('utf-8')
 
+    gemini_key = os.environ.get('GEMINI_API_KEY', '')
     req = urllib.request.Request(
-        'https://api.groq.com/openai/v1/chat/completions',
+        f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}',
         data=payload,
-        headers={
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + os.environ.get('GROQ_API_KEY', '')
-        }
+        headers={'Content-Type': 'application/json'}
     )
 
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             result = json.loads(resp.read())
-            text = result['choices'][0]['message']['content'].strip()
+            text = result['candidates'][0]['content']['parts'][0]['text'].strip()
             text = text.replace('```json', '').replace('```', '').strip()
             suggestions = json.loads(text)
             return jsonify({'suggestions': suggestions})
