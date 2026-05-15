@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import json, os, hashlib, uuid, time, threading, webbrowser
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'chatpilot_secret_2024'
@@ -145,7 +147,7 @@ Example format: ["reply one", "reply two", "reply three"]"""
         data=payload,
         headers={
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer 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'
+            'Authorization': 'Bearer ' + os.environ.get('GROQ_API_KEY', '')
         }
     )
 
