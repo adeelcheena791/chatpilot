@@ -273,8 +273,18 @@ def get_friends():
     current_email = session['user']['email']
     if current_email not in users:
         session.clear()
-        return jsonify({'success': False, 'redirect': '/login'})
+        return jsonify({'success': True, 'friends': []})
     friend_emails = users[current_email].get('friends', [])
+    friends_list = []
+    for email in friend_emails:
+        if email in users:
+            friends_list.append({
+                'name': users[email]['name'],
+                'username': users[email]['username'],
+                'email': email,
+                'profile_id': users[email]['profile_id']
+            })
+    return jsonify({'success': True, 'friends': friends_list})
 
 @app.route('/get_profile')
 def get_profile():
