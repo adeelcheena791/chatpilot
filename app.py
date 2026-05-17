@@ -8,17 +8,11 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'chatpilot_secret_2024'
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-USERS_FILE = 'users.json'
-
-def load_users():
-    if os.path.exists(USERS_FILE):
-        with open(USERS_FILE, 'r') as f:
-            return json.load(f)
-    return {}
-
-def save_users(users):
-    with open(USERS_FILE, 'w') as f:
-        json.dump(users, f, indent=2)
+# ── SUPABASE ──
+from supabase import create_client
+SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
+SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY', '')
+db = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -54,12 +48,18 @@ def login():
     data = request.get_json()
     email = data.get('email', '').lower().strip()
     password = data.get('password', '')
-    users = load_users()
-    user = users.get(email)
-    if not user or user['password'] != hash_password(password):
-        return jsonify({'success': False, 'message': 'Invalid email or password.'})
-    session['user'] = {'email': email, 'name': user['name'], 'username': user['username']}
-    return jsonify({'success': True})
+    try:
+        result = db.table('users').select('*').eq('email', email).execute()
+        if not result.data:
+            return jsonify({'success': False, 'message': 'Invalid email or password.'})
+        user = result.data[0]
+        if user['password'] != hash_password(password):
+            return jsonify({'success': False, 'message': 'Invalid email or password.'})
+        session['user'] = {'email': email, 'name': user['name'], 'username': user['username']}
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Login error: {e}")
+        return jsonify({'success': False, 'message': 'Server error.'})
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -72,24 +72,29 @@ def register():
         return jsonify({'success': False, 'message': 'All fields are required.'})
     if len(password) < 6:
         return jsonify({'success': False, 'message': 'Password must be at least 6 characters.'})
-    users = load_users()
-    if email in users:
-        return jsonify({'success': False, 'message': 'Email already registered.'})
-    for u in users.values():
-        if u['username'] == username:
+    try:
+        # Check email exists
+        existing = db.table('users').select('email').eq('email', email).execute()
+        if existing.data:
+            return jsonify({'success': False, 'message': 'Email already registered.'})
+        # Check username exists
+        existing_username = db.table('users').select('username').eq('username', username).execute()
+        if existing_username.data:
             return jsonify({'success': False, 'message': 'Username already taken.'})
-    users[email] = {
-        'name': name,
-        'username': username,
-        'email': email,
-        'password': hash_password(password),
-        'friends': [],
-        'friend_requests': [],
-        'profile_id': str(uuid.uuid4())[:8]
-    }
-    save_users(users)
-    session['user'] = {'email': email, 'name': name, 'username': username}
-    return jsonify({'success': True})
+        # Create user
+        profile_id = str(uuid.uuid4())[:8]
+        db.table('users').insert({
+            'email': email,
+            'name': name,
+            'username': username,
+            'password': hash_password(password),
+            'profile_id': profile_id
+        }).execute()
+        session['user'] = {'email': email, 'name': name, 'username': username}
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Register error: {e}")
+        return jsonify({'success': False, 'message': 'Server error.'})
 
 @app.route('/logout')
 def logout():
@@ -171,33 +176,32 @@ def search_user():
     if 'user' not in session:
         return jsonify({'success': False})
     query = request.args.get('q', '').lower().strip()
-    users = load_users()
     current_email = session['user']['email']
-    results = []
-    for email, u in users.items():
-        if email == current_email:
-            continue
-        if query in u['username'].lower() or query in u['name'].lower():
-            results.append({
-                'name': u['name'],
-                'username': u['username'],
-                'profile_id': u['profile_id']
-            })
-    return jsonify({'success': True, 'users': results[:5]})
+    try:
+        result = db.table('users').select('name, username, profile_id').execute()
+        users = result.data
+        filtered = [
+            u for u in users
+            if u.get('username') and (query in u['username'].lower() or query in u['name'].lower())
+            and u.get('email', '') != current_email
+        ]
+        return jsonify({'success': True, 'users': filtered[:5]})
+    except Exception as e:
+        print(f"Search error: {e}")
+        return jsonify({'success': True, 'users': []})
 
 @app.route('/add/<profile_id>')
 def add_friend_page(profile_id):
     if 'user' not in session:
         return redirect(url_for('login_page'))
-    users = load_users()
-    target_user = None
-    for email, u in users.items():
-        if u['profile_id'] == profile_id:
-            target_user = u
-            break
-    if not target_user:
-        return "User not found!", 404
-    return render_template('add_friend.html', target=target_user)
+    try:
+        result = db.table('users').select('*').eq('profile_id', profile_id).execute()
+        if not result.data:
+            return "User not found!", 404
+        target_user = result.data[0]
+        return render_template('add_friend.html', target=target_user)
+    except Exception as e:
+        return "Error!", 500
 
 @app.route('/send_friend_request', methods=['POST'])
 def send_friend_request():
@@ -205,106 +209,105 @@ def send_friend_request():
         return jsonify({'success': False, 'message': 'Not logged in'})
     data = request.get_json()
     target_profile_id = data.get('profile_id')
-    users = load_users()
     current_email = session['user']['email']
-    target_email = None
-    for email, u in users.items():
-        if u['profile_id'] == target_profile_id:
-            target_email = email
-            break
-    if not target_email:
-        return jsonify({'success': False, 'message': 'User not found'})
-    if target_email == current_email:
-        return jsonify({'success': False, 'message': 'You cannot add yourself!'})
-    if 'friend_requests' not in users[target_email]:
-        users[target_email]['friend_requests'] = []
-    for req in users[target_email]['friend_requests']:
-        if req['email'] == current_email:
+    try:
+        # Find target user
+        result = db.table('users').select('*').eq('profile_id', target_profile_id).execute()
+        if not result.data:
+            return jsonify({'success': False, 'message': 'User not found'})
+        target = result.data[0]
+        target_email = target['email']
+        if target_email == current_email:
+            return jsonify({'success': False, 'message': 'Cannot add yourself!'})
+        # Check already friends
+        existing = db.table('friends').select('*').eq('user_email', current_email).eq('friend_email', target_email).execute()
+        if existing.data:
+            return jsonify({'success': False, 'message': 'Already friends!'})
+        # Check request already sent
+        existing_req = db.table('friend_requests').select('*').eq('from_email', current_email).eq('to_email', target_email).execute()
+        if existing_req.data:
             return jsonify({'success': False, 'message': 'Request already sent!'})
-    if current_email in users[target_email].get('friends', []):
-        return jsonify({'success': False, 'message': 'Already friends!'})
-    users[target_email]['friend_requests'].append({
-        'email': current_email,
-        'name': session['user']['name'],
-        'username': session['user']['username']
-    })
-    save_users(users)
-    return jsonify({'success': True, 'message': 'Friend request sent!'})
+        # Send request
+        db.table('friend_requests').insert({
+            'from_email': current_email,
+            'from_name': session['user']['name'],
+            'from_username': session['user']['username'],
+            'to_email': target_email
+        }).execute()
+        return jsonify({'success': True, 'message': 'Friend request sent!'})
+    except Exception as e:
+        print(f"Friend request error: {e}")
+        return jsonify({'success': False, 'message': 'Server error.'})
 
 @app.route('/get_friend_requests')
 def get_friend_requests():
     if 'user' not in session:
         return jsonify({'success': False})
-    users = load_users()
     current_email = session['user']['email']
-    if current_email not in users:
-        session.clear()
-        return jsonify({'success': False})
-    requests = users[current_email].get('friend_requests', [])
-    return jsonify({'success': True, 'requests': requests})
+    try:
+        result = db.table('friend_requests').select('*').eq('to_email', current_email).execute()
+        requests = [{'email': r['from_email'], 'name': r['from_name'], 'username': r['from_username']} for r in result.data]
+        return jsonify({'success': True, 'requests': requests})
+    except Exception as e:
+        print(f"Get requests error: {e}")
+        return jsonify({'success': True, 'requests': []})
+
 @app.route('/accept_friend', methods=['POST'])
 def accept_friend():
     if 'user' not in session:
         return jsonify({'success': False})
     data = request.get_json()
     friend_email = data.get('email')
-    users = load_users()
     current_email = session['user']['email']
-    if 'friends' not in users[current_email]:
-        users[current_email]['friends'] = []
-    if 'friends' not in users[friend_email]:
-        users[friend_email]['friends'] = []
-    if friend_email not in users[current_email]['friends']:
-        users[current_email]['friends'].append(friend_email)
-    if current_email not in users[friend_email]['friends']:
-        users[friend_email]['friends'].append(current_email)
-    users[current_email]['friend_requests'] = [
-        r for r in users[current_email].get('friend_requests', [])
-        if r['email'] != friend_email
-    ]
-    save_users(users)
-    return jsonify({'success': True})
+    try:
+        # Add both as friends
+        db.table('friends').insert({'user_email': current_email, 'friend_email': friend_email}).execute()
+        db.table('friends').insert({'user_email': friend_email, 'friend_email': current_email}).execute()
+        # Delete request
+        db.table('friend_requests').delete().eq('from_email', friend_email).eq('to_email', current_email).execute()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Accept friend error: {e}")
+        return jsonify({'success': False, 'message': 'Error.'})
 
 @app.route('/get_friends')
 def get_friends():
     if 'user' not in session:
         return jsonify({'success': False})
-    users = load_users()
     current_email = session['user']['email']
-    if current_email not in users:
-        session.clear()
+    try:
+        result = db.table('friends').select('friend_email').eq('user_email', current_email).execute()
+        friends_list = []
+        for row in result.data:
+            friend_email = row['friend_email']
+            user_result = db.table('users').select('name, username, email, profile_id').eq('email', friend_email).execute()
+            if user_result.data:
+                friends_list.append(user_result.data[0])
+        return jsonify({'success': True, 'friends': friends_list})
+    except Exception as e:
+        print(f"Get friends error: {e}")
         return jsonify({'success': True, 'friends': []})
-    friend_emails = users[current_email].get('friends', [])
-    friends_list = []
-    for email in friend_emails:
-        if email in users:
-            friends_list.append({
-                'name': users[email]['name'],
-                'username': users[email]['username'],
-                'email': email,
-                'profile_id': users[email]['profile_id']
-            })
-    return jsonify({'success': True, 'friends': friends_list})
 
 @app.route('/get_profile')
 def get_profile():
     if 'user' not in session:
         return jsonify({'success': False})
-    users = load_users()
     current_email = session['user']['email']
-    profile_id = users[current_email]['profile_id']
-    return jsonify({'success': True, 'profile_id': profile_id})
+    try:
+        result = db.table('users').select('profile_id').eq('email', current_email).execute()
+        if result.data:
+            return jsonify({'success': True, 'profile_id': result.data[0]['profile_id']})
+        return jsonify({'success': False})
+    except Exception as e:
+        return jsonify({'success': False})
 
 # ── SOCKET EVENTS ──
 @socketio.on('connect')
 def on_connect():
-    print(f"🔌 SOMEONE CONNECTED - sid: {request.sid}")
     if 'user' in session:
         my_email = session['user']['email']
         join_room(my_email)
-        print(f"✅ {my_email} connected and joined room")
-    else:
-        print("⚠️ Connected but NO SESSION!")
+        print(f"✅ {my_email} connected")
 
 @socketio.on('disconnect')
 def on_disconnect():
@@ -315,7 +318,6 @@ def on_join(data):
     if 'user' in session:
         my_email = session['user']['email']
         join_room(my_email)
-        print(f"✅ {my_email} joined room")
 
 @socketio.on('message')
 def on_message(data):
@@ -326,10 +328,7 @@ def on_message(data):
     sender_name = session['user']['name']
     text = data.get('text', '')
     if friend_email and friend_email != my_email:
-        emit('message', {
-            'text': text,
-            'sender': sender_name
-        }, to=friend_email)
+        emit('message', {'text': text, 'sender': sender_name}, to=friend_email)
         print(f"📨 {my_email} → {friend_email}: {text}")
 
 # ── RUN ──
@@ -338,25 +337,4 @@ if __name__ == '__main__':
         time.sleep(1.5)
         webbrowser.open('http://127.0.0.1:5000')
     threading.Thread(target=open_browser).start()
-
-    try:
-        from pyngrok import ngrok
-        tunnels = ngrok.get_tunnels()
-        for tunnel in tunnels:
-            ngrok.disconnect(tunnel.public_url)
-        ngrok.kill()
-        time.sleep(1)
-        public_url = ngrok.connect(5000)
-        clean_url = public_url.public_url
-        print("\n" + "="*50)
-        print("🚀 ChatPilot AI is LIVE!")
-        print(f"🌍 Public URL: {clean_url}")
-        print("👆 Share this link with anyone!")
-        print("="*50 + "\n")
-    except Exception as e:
-        print("\n" + "="*50)
-        print("🚀 ChatPilot AI is LIVE!")
-        print("💻 Local URL: http://127.0.0.1:5000")
-        print("="*50 + "\n")
-
     socketio.run(app, debug=False, allow_unsafe_werkzeug=True)
