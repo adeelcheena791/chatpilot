@@ -237,9 +237,11 @@ def get_friend_requests():
         return jsonify({'success': False})
     users = load_users()
     current_email = session['user']['email']
+    if current_email not in users:
+        session.clear()
+        return jsonify({'success': False})
     requests = users[current_email].get('friend_requests', [])
     return jsonify({'success': True, 'requests': requests})
-
 @app.route('/accept_friend', methods=['POST'])
 def accept_friend():
     if 'user' not in session:
@@ -269,17 +271,10 @@ def get_friends():
         return jsonify({'success': False})
     users = load_users()
     current_email = session['user']['email']
+    if current_email not in users:
+        session.clear()
+        return jsonify({'success': False, 'redirect': '/login'})
     friend_emails = users[current_email].get('friends', [])
-    friends_list = []
-    for email in friend_emails:
-        if email in users:
-            friends_list.append({
-                'name': users[email]['name'],
-                'username': users[email]['username'],
-                'email': email,
-                'profile_id': users[email]['profile_id']
-            })
-    return jsonify({'success': True, 'friends': friends_list})
 
 @app.route('/get_profile')
 def get_profile():
