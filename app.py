@@ -154,10 +154,13 @@ Example format: ["reply one", "reply two", "reply three"]"""
 
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
-            result = json.loads(resp.read())
+            raw = resp.read()
+            print(f"✅ Gemini response: {raw[:300]}")
+            result = json.loads(raw)
             text = result['candidates'][0]['content']['parts'][0]['text'].strip()
             text = text.replace('```json', '').replace('```', '').strip()
             suggestions = json.loads(text)
+            print(f"✅ Suggestions: {suggestions}")
             return jsonify({'suggestions': suggestions})
     except Exception as e:
         import traceback
