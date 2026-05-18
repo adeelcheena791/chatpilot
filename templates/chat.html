@@ -558,8 +558,20 @@ socket.on('message',data=>{
 
 // INIT
 // INIT
-setTimeout(()=>{ loadFriends(); loadFriendRequests(); }, 500);
+// INIT
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(()=>{ loadFriends(); loadFriendRequests(); }, 1000);
+});
+
 setInterval(()=>{ loadFriends(); loadFriendRequests(); }, 5000);
+
+socket.on('connect', function(){
+  setTimeout(()=>{ loadFriends(); loadFriendRequests(); }, 500);
+});
+
+window.onload = function(){
+  setTimeout(()=>{ loadFriends(); loadFriendRequests(); }, 800);
+};
 
 socket.on('connect', function(){
   console.log('🔌 Connected!');
