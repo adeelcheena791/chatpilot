@@ -358,13 +358,8 @@ function getAISuggestions(lastMsg){
 function onToneChange(){ if(aiOn) getAISuggestions(''); }
 
 function onTyping(){
-  clearTimeout(typingTimer);
-  typingTimer = setTimeout(()=>{
-    const text = document.getElementById('msgInput').value.trim();
-    if(text && aiOn) getAISuggestions(text);
-  },1000);
+  // Disabled - only get suggestions after sending
 }
-
 function autoResize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
 
 // OPEN CHAT
@@ -556,7 +551,10 @@ function copyLink(){
 
 function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
 
-socket.on('message',data=>{ addMessage(data.text,'received'); if(aiOn) setTimeout(()=>getAISuggestions(data.text), 300); });
+socket.on('message',data=>{ 
+  addMessage(data.text,'received'); 
+  if(aiOn) setTimeout(()=>getAISuggestions(data.text), 500); 
+});
 
 // INIT
 loadFriends();
