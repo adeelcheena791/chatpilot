@@ -557,10 +557,14 @@ socket.on('message',data=>{
 });
 
 // INIT
-loadFriends();
-loadFriendRequests();
-setInterval(()=>{ loadFriends(); loadFriendRequests(); },5000);
+// INIT
+setTimeout(()=>{ loadFriends(); loadFriendRequests(); }, 500);
+setInterval(()=>{ loadFriends(); loadFriendRequests(); }, 5000);
 
+socket.on('connect', function(){
+  console.log('🔌 Connected!');
+  setTimeout(()=>{ loadFriends(); loadFriendRequests(); }, 500);
+});
 // Join own room on connect
 socket.on('connect', function(){
   console.log('🔌 Connected! Joining own room...');
